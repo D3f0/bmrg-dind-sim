@@ -1,0 +1,25 @@
+services:
+  main:
+    # Simulates a pod running a task inside boomerang
+    # image: alpine:3.17
+    build:
+      dockerfile: ./main/Dockerfile
+    user: root
+    volumes:
+      - ./main/scripts/:/scripts/:ro
+    depends_on: 
+      - socat
+    environment:
+      # Point to the `socat` container which makes TCP connection
+      # be redirected to the file socket mounted from the host.
+      - DOCKER_HOST=tcp://socat:2375
+
+  socat:
+    image: alpine/socat
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    command: tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
+    ports:
+      - "2375:2375"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
